@@ -8,7 +8,8 @@ For the [MIMIC-CRX](https://physionet.org/content/mimic-cxr/2.0.0/) and [MURA](h
 
 ### Data
 
-Download the data from this [link]()
+Download the data from this [link](https://drive.google.com/file/d/1oY1Ey8ttwh7eufx2EWf0jQj1LhXIbgBu/view?usp=sharing).
+Unzip the archive in the data folder.
 
 ### Train a model
 
@@ -19,15 +20,15 @@ python train.py --experiment_name=baseline \
 --use_hint True --hint_rate=0.5 --lmbda=0.5 --batch_size 64 \
 --network resnet50 --mode devries --early_stop_metric fpr_at_95_tpr --eval_start 10 --use_scheduler True
 ```
-The in-domain dataset is the Diabetic Retinopathy dataset and we select all the others as OOD. We use hint of probability ```0.5``` and lambda hyperparameters as ```0.5```. The early-stop metric chosen is ```fpr_at_95_tpr```. 
+The in-domain dataset is the Diabetic Retinopathy dataset and we select all the others as OOD. We use hint of probability ```0.5``` and lambda hyperparameters as ```0.5```. The early-stop metric chosen is ```fpr_at_95_tpr```.  We use the confidence branch (```--mode devries```)
 
-A pretrained model of this version can be download [here]()
+A pretrained model of this version can be download [here](https://drive.google.com/file/d/1uxsNyknFCO2E6WUWWVHOWcRCdZUN54tL/view?usp=sharing).
 
 ### Test a model
 
 Using the pretrained model, you can print results using this command:
 ```
-python test.py --ckpt checkpoints/baseline/model_0.03275.pth \
+python test.py --ckpt checkpoints/devries/ood_retina_model_0.03275.pth \
 --idd_name retina --ood_name mimic-crx skeletal-age mura drimdb \
 --network resnet50
 ```
@@ -45,7 +46,7 @@ skeletal-age max conf 0.7 min conf 0.6
 mura max conf 0.64 min conf 0.61
 drimdb max conf 0.85 min conf 0.61
 ```
-Images and plots and dumped in the ```checkpoints/baseline``` folder.
+Images and plots and dumped in the ```checkpoints/devries``` folder.
 Here are samples of these outputs:
 
 <table class="tg">
