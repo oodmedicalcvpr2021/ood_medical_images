@@ -1,8 +1,7 @@
 ## Out-of-distribution detection for medical imaging
 
 This repository replicates some of the results presented in the paper.
-Results can be replicated at the following Google Colab sheet: [![Open In Colab](https://github.com/oodmedicalcvpr2021/ood_medical_images/blob/main/ood_experiments.ipynb)
-
+Results can be replicated at the following Google Colab sheet: [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://github.com/oodmedicalcvpr2021/ood_medical_images/blob/main/ood_experiments.ipynb)
 
 We provide the full set of data for the [Diabetic Retinopathy](https://www.kaggle.com/c/diabetic-retinopathy-detection/data), [drimdb](http://isbb.ktu.edu.tr/multimedia/drimdb/) and [RNSA BoneAge](https://www.kaggle.com/kmader/rsna-bone-age) datasets as they are publicly available for download. 
 
