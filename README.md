@@ -48,3 +48,45 @@ drimdb max conf 0.85 min conf 0.61
 Images and plots and dumped in the ```checkpoints/baseline``` folder.
 Here are samples of these outputs:
 
+<table class="tg">
+<thead>
+  <tr>
+    <th align="center" colspan="4">Histograms</th>
+  </tr>
+</thead>
+<tbody>
+  <tr>
+    <td class="tg-0pky"><img src="images/skeletal-agehistogram.jpg" width=250px /></td>
+    <td class="tg-0pky"><img src="images/drimdbhistogram.jpg" width=250px /></td>
+    <td class="tg-0pky"><img src="images/mimic-crxhistogram.jpg" width=250px /></td>
+    <td class="tg-0pky"><img src="images/murahistogram.jpg" width=250px /></td>
+  </tr>
+</tbody>
+</table>
+
+
+<table class="tg">
+<thead>
+  <tr>
+    <th align="center" colspan="4">Confidence bounds</th>
+  </tr>
+</thead>
+<tbody>
+  <tr>
+    <td class="tg-0pky"><img src="images/retina_0.96.jpg" width=150px /></td>
+    <td class="tg-0pky"><img src="images/drimdb_0.61.jpg" width=150px /></td>
+    <td class="tg-0pky"><img src="images/drimdb_0.85.jpg" width=150px /></td>
+    <td class="tg-0pky"><img src="images/mura_0.61.jpg" width=150px /></td>
+  </tr>
+    <tr>
+    <td class="tg-0pky">Confidence:0.96</td>
+    <td class="tg-0pky">Drimdb:0.61</td>
+    <td class="tg-0pky">Drimdb:0.85</td>
+    <td class="tg-0pky">MURA:0.61</td>
+  </tr>
+  
+</tbody>
+</table>
+
+
+
