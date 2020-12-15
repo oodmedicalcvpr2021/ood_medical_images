@@ -80,14 +80,65 @@ Here are samples of these outputs:
     <td class="tg-0pky"><img src="images/mura_0.61.jpg" width=150px /></td>
   </tr>
     <tr>
-    <td class="tg-0pky">Confidence:0.96</td>
-    <td class="tg-0pky">Drimdb:0.61</td>
-    <td class="tg-0pky">Drimdb:0.85</td>
-    <td class="tg-0pky">MURA:0.61</td>
+    <td class="tg-0pky">Confidence: 0.96</td>
+    <td class="tg-0pky">Drimdb: 0.61</td>
+    <td class="tg-0pky">Drimdb: 0.85</td>
+    <td class="tg-0pky">MURA: 0.61</td>
   </tr>
   
 </tbody>
 </table>
 
+### 32x32 experiments
 
+Use the following command to start a training on 32x32 images using the outlier exposure method. Outliers sets are the SVHN, ImageNet, CIFAR10 and CIFAR100 datasets.<br/>
+Download the resized imagenet dataset [here](https://drive.google.com/file/d/1d4ATBsyh36hZgyUw23mTws4kuI7rVOiX/view?usp=sharing) and place it in the data folder. Other datasets will be downloaded automatically.
 
+```
+python train32.py --experiment_name=32x32 \
+--idd_name retina --ood_name mimic-crx skeletal-age mura \
+--batch_size 64 --network WideResNet \
+--early_stop_metric fpr_at_95_tpr --eval_start 10 --num_epochs 20
+```
+
+You can test the trained model by using:
+```
+python test32.py --ckpt checkpoints/32x32/model_0.0.pth \
+--idd_name retina --ood_name mimic-crx skeletal-age mura drimdb \
+--network WideResNet
+```
+
+Expected output:
+```
+Accuracy None
+OOD Metrics {'fpr_at_95_tpr': 0.0, 'detection_error': 0.0, 'auroc': 1.0, 'aupr_in': 1.0, 'aupr_out': 1.0, 'num_95_tpr': 4, 'OOD Name': 'mimic-crx'}
+{'fpr_at_95_tpr': 0.0, 'detection_error': 0.0, 'auroc': 1.0, 'aupr_in': 1.0, 'aupr_out': 1.0, 'num_95_tpr': 6, 'OOD Name': 'skeletal-age'}
+{'fpr_at_95_tpr': 0.0, 'detection_error': 0.0, 'auroc': 1.0, 'aupr_in': 1.0, 'aupr_out': 1.0, 'num_95_tpr': 4, 'OOD Name': 'mura'}
+{'fpr_at_95_tpr': 0.0, 'detection_error': 0.0, 'auroc': 1.0, 'aupr_in': 1.0, 'aupr_out': 1.0, 'num_95_tpr': 4, 'OOD Name': 'drimdb'}
+```
+
+Again, images and histrograms are dumped onto the ```checkpoints/32x32/``` folder.
+<table class="tg">
+<thead>
+  <tr>
+    <th align="center" colspan="3">Histogram</th>
+    <th align="center" colspan="3">Confidence</th>
+  </tr>
+</thead>
+<tbody>
+  <tr>
+    <td class="tg-0pky"><img src="images/32cifar100histogram.jpg" width=250px /></td>
+    <td class="tg-0pky"><img src="images/32drimdbhistogram.jpg" width=250px /></td>
+    <td class="tg-0pky"><img src="images/32mimic-crxhistogram.jpg" width=250px /></td>
+    <td class="tg-0pky" align="center"><img src="images/SVHN_0.0.jpg" width=50px /></td>
+  </tr>
+    <tr>
+    <td class="tg-0pky"></td>
+    <td class="tg-0pky"></td>
+    <td class="tg-0pky"></td>
+    <td class="tg-0pky">SVHN :0.0</td>
+  </tr>
+  
+  
+</tbody>
+</table>
