@@ -1,6 +1,8 @@
 ## Out-of-distribution detection for medical imaging
 
 This repository replicates some of the results presented in the paper.
+Results can be replicated at the following Google Colab sheet: [![Open In Colab](https://github.com/oodmedicalcvpr2021/ood_medical_images/blob/main/ood_experiments.ipynb)
+
 
 We provide the full set of data for the [Diabetic Retinopathy](https://www.kaggle.com/c/diabetic-retinopathy-detection/data), [drimdb](http://isbb.ktu.edu.tr/multimedia/drimdb/) and [RNSA BoneAge](https://www.kaggle.com/kmader/rsna-bone-age) datasets as they are publicly available for download. 
 
@@ -98,7 +100,7 @@ Download the resized imagenet dataset [here](https://drive.google.com/file/d/1d4
 python train32.py --experiment_name=32x32 \
 --idd_name retina --ood_name mimic-crx skeletal-age mura \
 --batch_size 64 --network WideResNet \
---early_stop_metric fpr_at_95_tpr --eval_start 10 --num_epochs 20
+--early_stop_metric fpr_at_95_tpr --eval_start 10 --num_epochs 20 --lr 0.001
 ```
 
 You can test the trained model by using:
