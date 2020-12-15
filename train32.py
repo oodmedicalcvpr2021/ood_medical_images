@@ -11,7 +11,6 @@ from dataset import OODDataset
 import torch.nn as nn
 import torch.optim as optim
 from network import WideResNet
-from losses import get_loss, get_confidence
 from torchvision.transforms import Compose, RandomHorizontalFlip, RandomResizedCrop, Resize, ToTensor
 import torchvision.datasets
 from dataset import Cutout
@@ -33,7 +32,7 @@ def main():
 
     # Training params
     parser.add_argument("--use_scheduler", type=bool, default=False)
-    parser.add_argument("--lr", type=int, default=0.01)
+    parser.add_argument("--lr", type=float, default=0.01)
     parser.add_argument('--early_stop_metric', type=str, default="fpr_at_95_tpr")
     parser.add_argument('--early_stop', type=int, default=5)
     parser.add_argument('--eval_start', type=int, default=1)
@@ -84,18 +83,18 @@ def main():
 
     outlier_datasets = list()
     outlier_datasets.append(torchvision.datasets.CIFAR10(
-        'cifar', train=False, download=True,
+        'cifar', train=True, download=True,
         transform=dataset.train_input_transforms))
 
     outlier_datasets.append(torchvision.datasets.CIFAR100(
-        'cifar', train=False, download=True,
+        'cifar', train=True, download=True,
         transform=dataset.train_input_transforms))
 
     outlier_datasets.append(torchvision.datasets.SVHN(
         'SVHN', split='test', download=True,
         transform=dataset.train_input_transforms))
 
-    outlier_datasets.append(torchvision.datasets.ImageFolder("val_imagenet", transform=dataset.train_input_transforms))
+    outlier_datasets.append(torchvision.datasets.ImageFolder("data/val_imagenet", transform=dataset.train_input_transforms))
     outlier_set = ConcatDataset(outlier_datasets)
 
     net = eval(args.network)(num_classes=args.num_classes).cuda()
@@ -105,9 +104,8 @@ def main():
         weight_decay=5e-4, nesterov=True)
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', patience=0, factor=0.8)
 
-    if torch.cuda.device_count() > 1:
-        print("Let's use", torch.cuda.device_count(), "GPUs!")
-        net = nn.DataParallel(net)
+    print("Let's use", torch.cuda.device_count(), "GPUs!")
+    net = nn.DataParallel(net)
 
     print("Network", args.network,
           "\nTotal number of parameters : " + str(sum([p.numel() for p in net.parameters()]) / 1e6) + "M")
@@ -139,12 +137,12 @@ def main():
                 [np.ones((len(in_set[0]), 1)),
                  np.zeros((len(out_set[0]), 1))
                  ]))
-            task_loss = F.binary_cross_entropy_with_logits(confidence, labels.cuda())
+            task_loss = F.binary_cross_entropy_with_logits(confidence, labels.cuda(), reduction="sum")
             task_loss.backward()
             optimizer.step()
 
             print(
-                "\r[Epoch {}][Step {}/{}] task_loss: {:.2f}, Lr: {:.2e}, ES: {}, {:.2f} m remaining".format(
+                "\r[Epoch {}][Step {}/{}] task_loss: {:.5f}, Lr: {:.2e}, ES: {}, {:.2f} m remaining".format(
                     epoch + 1,
                     train_iter,
                     int(len(train_loader.dataset) / args.batch_size),

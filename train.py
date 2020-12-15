@@ -33,7 +33,7 @@ def main():
 
     # Training params
     parser.add_argument("--use_scheduler", type=bool, default=False)
-    parser.add_argument("--lr", type=int, default=1e-3)
+    parser.add_argument("--lr", type=float, default=1e-3)
     parser.add_argument('--early_stop_metric', type=str, default="fpr_at_95_tpr")
     parser.add_argument('--early_stop', type=int, default=5)
     parser.add_argument('--eval_start', type=int, default=1)
