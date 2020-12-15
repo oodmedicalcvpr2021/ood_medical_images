@@ -100,7 +100,7 @@ class OODDataset(Dataset):
         super(OODDataset, self).__init__()
         self.name = name
         self.mode = mode
-        assert self.mode in ['idd', 'ood']
+        assert self.mode in ['train', 'test']
         assert self.name in ['retina', 'skeletal-age', 'mura', 'mimic-crx', 'drimdb']
         self.root_dir = root_dir
         self.df = pd.read_csv(os.path.join(root_dir, csv_file))
@@ -127,9 +127,9 @@ class OODDataset(Dataset):
         else:
             image_arr = open_file(f"{self.root_dir}/{self.df.iloc[index, 0]}")
 
-        if self.mode == "idd":
+        if self.mode == "train":
             inputs = train_input_transforms(image_arr)
-        elif self.mode == "ood":
+        elif self.mode == "test":
             inputs = test_input_transforms(image_arr)
         else:
             raise NotImplementedError

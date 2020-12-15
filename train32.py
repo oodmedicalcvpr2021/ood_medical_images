@@ -1,16 +1,21 @@
-import argparse
-import numpy as np
 import os
 import time
+import argparse
+import dataset
+import utils
+import torch
+import numpy as np
 from metrics import calc_metrics
 from torch.utils.data import DataLoader, ConcatDataset
 from dataset import OODDataset
-import utils
-import torch
 import torch.nn as nn
 import torch.optim as optim
-from network import ResNet
+from network import WideResNet
 from losses import get_loss, get_confidence
+from torchvision.transforms import Compose, RandomHorizontalFlip, RandomResizedCrop, Resize, ToTensor
+import torchvision.datasets
+from dataset import Cutout
+import torch.nn.functional as F
 
 
 def main():
@@ -21,19 +26,14 @@ def main():
     parser.add_argument("--mode", type=str, default='devries',
                         choices=['baseline', 'devries', 'oe'])
     parser.add_argument("--ood_name", type=str, nargs='+', default=['skeletal-age', 'mura', 'mimic-crx'])
-    parser.add_argument("--network", type=str, default="resnet")
+    parser.add_argument("--network", type=str, default="WideResNet")
     # Hyper params
     parser.add_argument("--num_epochs", type=int, default=300)
-    parser.add_argument("--use_budget", type=bool, default=False)
-    parser.add_argument("--beta", type=float, default=None)
-    parser.add_argument("--use_hint", type=bool, default=False)
-    parser.add_argument("--hint_rate", type=float, default=None)
-    parser.add_argument("--lmbda", type=float, default=0.1)
     parser.add_argument("--batch_size", type=int, default=64)
 
     # Training params
     parser.add_argument("--use_scheduler", type=bool, default=False)
-    parser.add_argument("--lr", type=int, default=1e-3)
+    parser.add_argument("--lr", type=int, default=0.01)
     parser.add_argument('--early_stop_metric', type=str, default="fpr_at_95_tpr")
     parser.add_argument('--early_stop', type=int, default=5)
     parser.add_argument('--eval_start', type=int, default=1)
@@ -43,6 +43,15 @@ def main():
 
     args = parser.parse_args()
     args = utils.compute_args(args)
+
+    # Change to 32x32
+    dataset.test_input_transforms.transforms[0] = Resize(size=(32, 32))
+    dataset.train_input_transforms = Compose([
+        RandomResizedCrop((32, 32)),
+        RandomHorizontalFlip(),
+        ToTensor(),
+        Cutout(16),
+    ])
 
     # Create dataloader according to experiments
     loader_args = {'name': args.idd_name,
@@ -73,17 +82,34 @@ def main():
                                                   shuffle=False,
                                                   num_workers=4)
 
-    net = ResNet(args).cuda()
-    optimizer = optim.Adam(net.parameters(), lr=args.lr)
-    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'max', patience=0, factor=0.8)
+    outlier_datasets = list()
+    outlier_datasets.append(torchvision.datasets.CIFAR10(
+        'cifar', train=False, download=True,
+        transform=dataset.train_input_transforms))
+
+    outlier_datasets.append(torchvision.datasets.CIFAR100(
+        'cifar', train=False, download=True,
+        transform=dataset.train_input_transforms))
+
+    outlier_datasets.append(torchvision.datasets.SVHN(
+        'SVHN', split='test', download=True,
+        transform=dataset.train_input_transforms))
+
+    outlier_datasets.append(torchvision.datasets.ImageFolder("val_imagenet", transform=dataset.train_input_transforms))
+    outlier_set = ConcatDataset(outlier_datasets)
+
+    net = eval(args.network)(num_classes=args.num_classes).cuda()
+
+    optimizer = torch.optim.SGD(
+        net.parameters(), args.lr, momentum=0.9,
+        weight_decay=5e-4, nesterov=True)
+    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', patience=0, factor=0.8)
 
     if torch.cuda.device_count() > 1:
         print("Let's use", torch.cuda.device_count(), "GPUs!")
         net = nn.DataParallel(net)
 
-    print("Network", args.network, 'mode', args.mode,
-          "\nUse budget", args.use_budget, "Use hint", args.use_hint,
-          "\nLambda", args.lmbda, "beta", args.beta, "hint_rate", args.hint_rate,
+    print("Network", args.network,
           "\nTotal number of parameters : " + str(sum([p.numel() for p in net.parameters()]) / 1e6) + "M")
 
     checkpoints_folder = f"checkpoints/{args.experiment_name}"
@@ -96,23 +122,33 @@ def main():
         train_start = time.time()
         # Train phase
         net.train()
-        for train_iter, sample in enumerate(train_loader, 0):
+        # Shuffling outlier set
+        outlier_loader = DataLoader(outlier_set,
+                                    batch_size=16,
+                                    shuffle=True,
+                                    num_workers=4)
+
+        for train_iter, (in_set, out_set) in enumerate(zip(train_loader, outlier_loader)):
             optimizer.zero_grad()
-            images, labels = sample
-            logits, confidence = net(images.cuda())
-            total_loss, task_loss, confidence_loss = get_loss(logits, confidence, labels.cuda(), args)
-            total_loss.backward()
+
+            data = torch.cat((in_set[0], out_set[0]), dim=0)
+            # forward
+            _, confidence = net(data.cuda())
+            # backward
+            labels = torch.from_numpy(np.concatenate(
+                [np.ones((len(in_set[0]), 1)),
+                 np.zeros((len(out_set[0]), 1))
+                 ]))
+            task_loss = F.binary_cross_entropy_with_logits(confidence, labels.cuda())
+            task_loss.backward()
             optimizer.step()
 
             print(
-                "\r[Epoch {}][Step {}/{}] Loss: {:.2f} [Task: {:.2f}, Confidence: {:.2f}, lambda: {:.2f}], Lr: {:.2e}, ES: {}, {:.2f} m remaining".format(
+                "\r[Epoch {}][Step {}/{}] task_loss: {:.2f}, Lr: {:.2e}, ES: {}, {:.2f} m remaining".format(
                     epoch + 1,
                     train_iter,
                     int(len(train_loader.dataset) / args.batch_size),
-                    total_loss.cpu().data.numpy(),
                     task_loss.cpu().data.numpy(),
-                    confidence_loss.cpu().data.numpy(),
-                    args.lmbda,
                     *[group['lr'] for group in optimizer.param_groups],
                     early_stop,
                     ((time.time() - train_start) / (train_iter + 1)) * (
@@ -125,27 +161,22 @@ def main():
 
             def evaluate(data_loader):
                 confidences = []
-                predictions = []
 
                 for test_iter, sample in enumerate(data_loader, 0):
                     images, labels = sample
-                    logits, confidence = net(images.cuda())
-                    pred = torch.argmax(logits, dim=-1).data.cpu().numpy()
-                    confidence = get_confidence(logits, confidence, args)
-
-                    predictions.append(pred == labels.data.cpu().numpy())
+                    _, confidence = net(images.cuda())
+                    confidence = torch.sigmoid(confidence).cpu().data
                     confidences.append(confidence)
-
-                predictions = np.concatenate(predictions)
                 confidences = np.concatenate(confidences)
-                return predictions, confidences
+
+                return None, confidences
 
             # In domain evaluation
-            ind_predictions, ind_confidences = evaluate(test_true_loader)
+            _, ind_confidences = evaluate(test_true_loader)
             ind_labels = np.ones(ind_confidences.shape[0])
 
-            accuracy = round(float(np.mean(ind_predictions)), 4)
-            print(args.idd_name, accuracy, '% accuracy')
+            # accuracy = round(float(np.mean(ind_predictions)), 4)
+            # print(args.idd_name, accuracy, '% accuracy')
 
             # Out of domain evaluation
             early_stop_metric_value = 0
@@ -174,7 +205,7 @@ def main():
                 torch.save({
                     "net": net.state_dict(),
                     "ood_metrics": ood_metric_dicts,
-                    "accuracy": accuracy,
+                    "accuracy": None,
                     "best_early_stop_value": best_early_stop_value,
                     "args": args,
                 }, f'{checkpoints_folder}/model_{best_early_stop_value}.pth'
@@ -183,7 +214,7 @@ def main():
                 print('Early stop metric ' + str(args.early_stop_metric) + ' beaten. Now ' + str(best_early_stop_value))
 
             if args.use_scheduler:
-                scheduler.step(accuracy)
+                scheduler.step(early_stop_metric_value)
 
         if early_stop == args.early_stop:
             print("early_stop reached")
