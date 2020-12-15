@@ -22,7 +22,7 @@ python train.py --experiment_name=baseline \
 ```
 The in-domain dataset is the Diabetic Retinopathy dataset and we select all the others as OOD. We use hint of probability ```0.5``` and lambda hyperparameters as ```0.5```. The early-stop metric chosen is ```fpr_at_95_tpr```.  We use the confidence branch (```--mode devries```)
 
-A pretrained model of this version can be download [here](https://drive.google.com/file/d/1uxsNyknFCO2E6WUWWVHOWcRCdZUN54tL/view?usp=sharing).
+A pretrained model of this version can be download [here](https://drive.google.com/file/d/12kSN6doGy5csr0NQAaY_kmqA9Xu2Uisq/view?usp=sharing).
 
 ### Test a model
 
